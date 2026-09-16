@@ -1,5 +1,5 @@
 # DBF 2026-2027 Optimizer 
-Last Updated - 9/15/26
+Last Updated - 9/16/26
 
 ## List of variables accounted for by optimizer 
 | Category | Parameter | Symbol | Units | Purpose |
@@ -18,3 +18,7 @@ Last Updated - 9/15/26
 | **Mass & Energy** | Battery Voltage | $V$ | $V$ | Dictates the motor's RPM ceiling and the total electrical power available. |
 | **Environment** | Air Density | $\rho$ | $kg/m^3$ | Density of the air ($1.225 \text{ kg/m}^3$ at sea level). Affects drag, lift, and prop bite. |
 | **Environment** | Gravity | $g$ | $m/s^2$ | Constant ($9.81 \text{ m/s}^2$) used to convert the plane's mass ($kg$) into downward force ($N$). |
+
+## runmefirst.txt 
+### This file installs all prerequisite python modules needed to run this program. 
+Run this file by running `python3 -m pip install -r runmefirst.txt` in terminal or git bash. 
