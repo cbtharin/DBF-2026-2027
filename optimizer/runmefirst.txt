@@ -1,0 +1,7 @@
+# runmefirst.txt
+# Author(s): Aryan Patil
+
+# Last updated: 9/16/2026
+# This file installs prerequisites for the project. It is intended to be run before any other scripts.
+
+python3 -m pip install matplotlib
