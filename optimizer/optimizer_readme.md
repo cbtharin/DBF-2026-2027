@@ -20,5 +20,5 @@ Last Updated - 9/16/26
 | **Environment** | Gravity | $g$ | $m/s^2$ | Constant ($9.81 \text{ m/s}^2$) used to convert the plane's mass ($kg$) into downward force ($N$). |
 
 ## runmefirst.txt 
-### This file installs all prerequisite python modules needed to run this program. 
+### This file lists all prerequisite python modules needed to run this program. 
 Install the modules in this file by running them in terminal/bash!
