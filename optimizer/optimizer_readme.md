@@ -21,4 +21,4 @@ Last Updated - 9/16/26
 
 ## runmefirst.txt 
 ### This file installs all prerequisite python modules needed to run this program. 
-Run this file by running `python3 -m pip install -r runmefirst.txt` in terminal or git bash. 
+Install the modules in this file by running them in terminal/bash!
