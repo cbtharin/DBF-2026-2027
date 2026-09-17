@@ -1,0 +1,105 @@
+%% Univariate (One-At-a-Time) Sensitivity Analysis for M2 and M3
+% Variables: sensor weight, #laps, time
+% Sweep range: -50% to +50% of baseline, one variable at a time
+%
+% Models:
+%   M2 = 1 + [ N_(weight/time) / Max_(weight/time) ]
+%   M3 = 2 + [ N_(#laps x weight) / Max_(#laps x weight) ]
+%
+% N_ = current (swept) value of the ratio/product at each step
+% Max_ = fixed normalizer = best-possible ratio/product from bracket extremes
+
+clear; clc; close all;
+
+%% ---------------- 1. Define brackets and baselines ----------------
+% Brackets [min, max]
+weight_bracket = [0.43, 2.15];
+laps_bracket   = [5, 13];
+time_bracket   = [23, 60];
+
+% Baseline = midpoint of bracket
+weight_base = mean(weight_bracket);   % 1.29
+laps_base   = mean(laps_bracket);     % 9
+time_base   = mean(time_bracket);     % 41.5
+
+fprintf('Baseline values:\n');
+fprintf('  Weight = %.4f\n', weight_base);
+fprintf('  Laps   = %.4f\n', laps_base);
+fprintf('  Time   = %.4f\n\n', time_base);
+
+%% ---------------- 2. Fixed normalizers (Max_) ----------------
+% Best possible weight/time ratio -> max weight, min time
+Max_WT = weight_bracket(2) / time_bracket(1);   % 2.15 / 23
+
+% Best possible laps*weight product -> max laps, max weight
+Max_LW = laps_bracket(2) * weight_bracket(2);   % 13 * 2.15
+
+fprintf('Fixed normalizers:\n');
+fprintf('  Max_(weight/time)      = %.4f\n', Max_WT);
+fprintf('  Max_(laps x weight)    = %.4f\n\n', Max_LW);
+
+%% ---------------- 3. Sweep settings ----------------
+pct_change = -0.50:0.01:0.50;   % -50% to +50%, 1% steps
+n = length(pct_change);
+
+%% ---------------- 4. Model functions ----------------
+M2_fun = @(w, t) 1 + (w ./ t) / Max_WT;
+M3_fun = @(l, w) 2 + (l .* w) / Max_LW;
+
+%% ---------------- 5. Sweep each variable (OAT) ----------------
+
+% --- Sweep WEIGHT (affects both M2 and M3) ---
+weight_sweep = weight_base * (1 + pct_change);
+M2_weight = M2_fun(weight_sweep, time_base * ones(1,n));
+M3_weight = M3_fun(laps_base * ones(1,n), weight_sweep);
+
+% --- Sweep TIME (affects only M2) ---
+time_sweep = time_base * (1 + pct_change);
+M2_time = M2_fun(weight_base * ones(1,n), time_sweep);
+
+% --- Sweep LAPS (affects only M3) ---
+% Laps must be whole numbers, so round the swept values before computing M3
+laps_sweep = round(laps_base * (1 + pct_change));
+M3_laps = M3_fun(laps_sweep, weight_base * ones(1,n));
+
+%% ---------------- 6. Plot: M2 sensitivity ----------------
+figure('Name','M2 Sensitivity','Color','w');
+plot(pct_change*100, M2_weight, 'LineWidth', 2); hold on;
+plot(pct_change*100, M2_time, 'LineWidth', 2);
+xlabel('% Change from Baseline');
+ylabel('M2');
+title('Univariate Sensitivity of M2');
+legend('Weight varied', 'Time varied', 'Location', 'best');
+grid on;
+
+%% ---------------- 7. Plot: M3 sensitivity ----------------
+figure('Name','M3 Sensitivity','Color','w');
+plot(pct_change*100, M3_weight, 'LineWidth', 2); hold on;
+plot(pct_change*100, M3_laps, 'LineWidth', 2);
+xlabel('% Change from Baseline');
+ylabel('M3');
+title('Univariate Sensitivity of M3');
+legend('Weight varied', 'Laps varied', 'Location', 'best');
+grid on;
+
+%% ---------------- 8. Sensitivity Summary (printed only) ----------------
+% Compute output range (max-min) for each variable/output combo
+M2_weight_range = max(M2_weight) - min(M2_weight);
+M2_time_range   = max(M2_time) - min(M2_time);
+M3_weight_range = max(M3_weight) - min(M3_weight);
+M3_laps_range   = max(M3_laps) - min(M3_laps);
+
+fprintf('---------------- Sensitivity Summary (Output Range over +/-50%%) ----------------\n');
+fprintf('M2: Weight swept -> range = %.4f\n', M2_weight_range);
+fprintf('M2: Time swept   -> range = %.4f\n', M2_time_range);
+fprintf('M3: Weight swept -> range = %.4f\n', M3_weight_range);
+fprintf('M3: Laps swept   -> range = %.4f\n', M3_laps_range);
+
+%% ---------------- 9. Export results table ----------------
+results = table(pct_change'*100, weight_sweep', time_sweep', laps_sweep', ...
+    M2_weight', M2_time', M3_weight', M3_laps', ...
+    'VariableNames', {'PctChange','Weight_swept','Time_swept','Laps_swept', ...
+    'M2_WeightVaried','M2_TimeVaried','M3_WeightVaried','M3_LapsVaried'});
+
+writetable(results, 'univariate_sensitivity_results.csv');
+fprintf('\nResults exported to univariate_sensitivity_results.csv\n');
