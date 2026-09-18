@@ -1,0 +1,130 @@
+% Mark 6
+
+
+
+
+% Variables: sensor weight, #laps, time
+% Sweep range: -50% to +50% of baseline, one variable at a time
+%
+% Models:
+%   M2 = 1 + [ N_(weight/time) / Max_(weight/time) ]
+%   M3 = 2 + [ N_(#laps x weight) / Max_(#laps x weight) ]
+%
+% N_ = current (swept) value of the ratio/product at each step
+% Max_ = fixed normalizer = best-possible ratio/product from bracket extremes
+
+clear; clc; close all;
+
+%% ---------------- 1. Define brackets and baselines ----------------
+% Brackets [min, max]
+weight_bracket = [0.43, 2.15];       % total payload weight (sensor+container +/- simulators)
+laps_bracket   = [4, 13];            % laps flown for M3 (no rules minimum; 1 = worst-case prediction)
+time_bracket_per_lap = [23, 60];     % originally predicted as seconds PER LAP
+time_bracket = time_bracket_per_lap * 5;   % converted to TOTAL time for 5 laps -> [115, 300] sec
+
+% Baseline = midpoint of bracket
+weight_base = mean(weight_bracket);   % 1.29
+laps_base   = mean(laps_bracket);     % 7 (midpoint of [4, 13])
+time_base   = mean(time_bracket);     % 207.5 (midpoint of [115, 300])
+
+fprintf('Baseline values:\n');
+fprintf('  Weight = %.4f\n', weight_base);
+fprintf('  Laps   = %.4f\n', laps_base);
+fprintf('  Time   = %.4f\n\n', time_base);
+
+%% ---------------- 2. Fixed normalizers (Max_) ----------------
+% Best possible weight/time ratio -> max weight, min time
+Max_WT = weight_bracket(2) / time_bracket(1);   % 2.15 / 115
+
+% Best possible laps*weight product -> max laps, max weight
+Max_LW = laps_bracket(2) * weight_bracket(2);   % 13 * 2.15
+
+fprintf('Fixed normalizers:\n');
+fprintf('  Max_(weight/time)      = %.4f\n', Max_WT);
+fprintf('  Max_(laps x weight)    = %.4f\n\n', Max_LW);
+
+%% ---------------- 3. Sweep settings ----------------
+pct_change = -0.50:0.01:0.50;   % -50% to +50%, 1% steps
+n = length(pct_change);
+
+%% ---------------- 4. Model functions ----------------
+M2_fun = @(w, t)  (w ./ t) / Max_WT;
+M3_fun = @(l, w)  (l .* w) / Max_LW;
+
+% Ground mission: drop height from [10,60] multiplied by sensor weight
+height_bracket = [1, 5];
+height_base = mean(height_bracket);
+Max_GH = height_bracket(2) * weight_bracket(2);
+G_fun = @(h, w) (h .* w) / Max_GH;
+
+%% ---------------- 5. Sweep each variable (OAT) ----------------
+
+% --- Sweep WEIGHT (affects both M2 and M3) ---
+weight_sweep = weight_base * (1 + pct_change);
+M2_weight = M2_fun(weight_sweep, time_base * ones(1,n));
+M3_weight = M3_fun(laps_base * ones(1,n), weight_sweep);
+G_weight  = G_fun(height_base * ones(1,n), weight_sweep);
+
+% --- Sweep TIME (affects only M2) ---
+time_sweep = time_base * (1 + pct_change);
+M2_time = M2_fun(weight_base * ones(1,n), time_sweep);
+
+% --- Sweep LAPS (affects only M3) ---
+laps_sweep = round(laps_base * (1 + pct_change));
+M3_laps = M3_fun(laps_sweep, weight_base * ones(1,n));
+
+% --- Sweep DROP HEIGHT (affects only Ground) ---
+height_sweep = height_base * (1 + pct_change);
+G_height = G_fun(height_sweep, weight_base * ones(1,n));
+%% ---------------- 6. Combined Plot: M2 and M3 sensitivity together ----------------
+% Convert outputs to PERCENT CHANGE from baseline (matches prior-year plot style)
+%M2_base = M2_fun(weight_base, time_base);
+%M3_base = M3_fun(laps_base, weight_base);
+
+%M2_weight_pct = (M2_weight - M2_base) / M2_base * 100;
+%M2_time_pct   = (M2_time   - M2_base) / M2_base * 100;
+%M3_weight_pct = (M3_weight - M3_base) / M3_base * 100;
+%M3_laps_pct   = (M3_laps   - M3_base) / M3_base * 100;
+%
+%figure('Name','M2 & M3 Sensitivity (% Change)','Color','w');
+%plot(pct_change*100, M2_weight_pct, 'LineWidth', 2, 'LineStyle','-'); hold on;
+%plot(pct_change*100, M2_time_pct,   'LineWidth', 2, 'LineStyle','-');
+%plot(pct_change*100, M3_weight_pct, 'LineWidth', 2, 'LineStyle','--');
+%plot(pct_change*100, M3_laps_pct,   'LineWidth', 2, 'LineStyle','--');
+%xlabel('Percent Change to Parameter (%)');
+%ylabel('Percent Change to Variable Mission Score (%)');
+%title('Univariate Sensitivity: M2 and M3 (Normalized)');
+%legend('M2 - Weight varied', 'M2 - Time varied', ...
+%    'M3 - Weight varied', 'M3 - Laps varied', ...
+%    'Location', 'best');
+%grid on;
+%xlim([-50 50]);
+
+%% ---------------- 7. Combined Plot: sensitivity together ----------------
+M2_base = M2_fun(weight_base, time_base);
+M3_base = M3_fun(laps_base, weight_base);
+G_base  = G_fun(height_base, weight_base);
+
+M2_weight_pct = (M2_weight - M2_base) / M2_base * 100;
+M2_time_pct   = (M2_time   - M2_base) / M2_base * 100;
+M3_weight_pct = (M3_weight - M3_base) / M3_base * 100;
+M3_laps_pct   = (M3_laps   - M3_base) / M3_base * 100;
+G_weight_pct  = (G_weight  - G_base)  / G_base  * 100;
+G_height_pct  = (G_height  - G_base)  / G_base  * 100;
+
+figure('Name','Sensitivity (% Change)','Color','w');
+plot(pct_change*100, M2_weight_pct, 'LineWidth', 2); hold on;
+plot(pct_change*100, M2_time_pct,   'LineWidth', 2);
+plot(pct_change*100, M3_weight_pct, 'LineWidth', 2, 'LineStyle','--');
+plot(pct_change*100, M3_laps_pct,   'LineWidth', 2, 'LineStyle','--');
+plot(pct_change*100, G_weight_pct,   'LineWidth', 2, 'LineStyle',':');
+plot(pct_change*100, G_height_pct,   'LineWidth', 2, 'LineStyle',':');
+xlabel('Percent Change to Parameter (%)');
+ylabel('Percent Change to Score (%)');
+title('Univariate Sensitivity: M2, M3, and Ground Mission');
+legend('M2 - Weight varied', 'M2 - Time varied', ...
+    'M3 - Weight varied', 'M3 - Laps varied', ...
+    'Ground - Weight varied', 'Ground - Height varied', ...
+    'Location', 'best');
+grid on;
+xlim([-50 50]);
