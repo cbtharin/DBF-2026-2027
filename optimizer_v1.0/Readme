@@ -1,0 +1,838 @@
+# DBF 2026-27 Mission Simulator and Design Optimiser
+
+Sizes an aircraft, flies all three missions, scores them, and returns both
+the design and the parts list to build it.
+
+**One file, no dependencies.** `dbf.py` is the whole thing — pure Python
+standard library, no `pip install`, no numpy. Python 3.8+, verified on 3.13.
+
+```bash
+python dbf.py --quick                 # fast search (~5 min on 16 cores)
+python dbf.py --thorough              # wide search (~20 min)
+python dbf.py --evaluate design.json  # score one aeroplane, print its BOM
+python dbf.py --selftest              # 117 physics and scoring invariants
+python dbf.py --validate              # 602 integrity and interface checks
+python dbf.py --convergence           # numerical error study
+python dbf.py --audit results/ranked_designs.csv   # which options won
+python dbf.py --version
+```
+
+The `dbf2027/` package (in the development repo) is the same code split
+into modules; `build_single_file.py` regenerates `dbf.py` from it. You do
+not need either to run the tool.
+
+## What is in this repository
+
+```
+dbf.py                 the entire tool - this is the program
+README.md              this file: derivations, assumptions, limitations
+LICENSE                MIT
+examples/baseline.json      a hand-picked design, to try --evaluate
+examples/optimised_v1.json  the current best design found by the search
+```
+
+Clone it and run `python dbf.py --quick`. Nothing to install.
+
+---
+
+## How to read this document
+
+Each section states **what the model does**, **derives the formulas**, then
+closes with two lists:
+
+> **Assumptions** — what we decided, and what you would change it to.
+>
+> **Distance from reality** — what is missing, and which direction the error
+> runs. This is the honest part. Read it before you trust a number.
+
+Notation: `L` lift, `D` drag, `T` thrust, `W` weight, `q = ½ρV²`, `S` wing
+area, `b` span, `c` mean chord, `AR = b²/S`, `n` load factor. SI internally,
+imperial only for display.
+
+---
+
+# 1. What it computes, and the chain that connects it
+
+Given a **design vector** the model builds the aeroplane, flies all three
+missions and scores it. Given a **search space** it does that ~100,000 times
+and reports the best.
+
+Nothing is a standalone lookup. Change one number and it propagates:
+
+```
+payload count (sensor container + simulators, one fixed box size)
+  -> payload bay, packed in the lowest-drag arrangement
+  -> fuselage length, width, height
+  -> wetted area -> parasite drag
+  -> tail arm -> tail area (volume coefficients) -> more drag
+  -> gross weight
+  -> V-n diagram (manoeuvre vs gust vs CLmax ceiling) -> ultimate load factor
+  -> spar sized for root bending at that load factor
+  -> more structure -> more weight  (iterated to convergence)
+  -> stall speed, turn rate, lap time, energy per lap
+  -> mission score
+```
+
+"Carry one more container" is therefore not a weight penalty bolted on at
+the end. It lengthens the fuselage, adds wetted area, moves and grows the
+tail, thickens the spar, and slows every lap.
+
+**The design variables**
+
+| Variable | Representation |
+|---|---|
+| wing span | continuous, capped at the 6 ft rule |
+| chord | derived from span and aspect ratio, so AR is always valid |
+| airfoil | 20-entry catalogue, CLmax 1.04 to 2.20 |
+| motor | 20-entry catalogue, 300–1130 Kv, 118–640 g |
+| propeller | 28 sizes |
+| motor count | 1, 2, 3 or 4 |
+| battery | cell × series × parallel (LiPo, Li-ion, NiMH, NiCd) |
+| voltage, watt-hours | derived; Wh capped at 100 |
+| sensor mass | continuous, no ceiling |
+| simulator count and mass | integer, continuous |
+
+**Tail sizing.** Horizontal and vertical areas come from volume
+coefficients, `S_h = V_h · S · c / l_t` and `S_v = V_v · S · b / l_t`, with
+`V_h = 0.55`, `V_v = 0.040`, and tail arm `l_t = 0.45 ×` fuselage length.
+
+> **Assumptions.** Rectangular untapered wing. Fuselage is a prismatic box
+> sized to the payload bay plus a 0.22 m nose and 0.55 m tailcone. Tail
+> volume coefficients are conventional light-aircraft values. Payload boxes
+> pack into the arrangement (1–4 across, 1–3 high) with the least wetted
+> area.
+>
+> **Distance from reality.** No taper, twist, washout, sweep or dihedral —
+> all of which a real wing has, and all of which change span efficiency and
+> stall behaviour. The fuselage is a box: pessimistic against a moulded pod,
+> optimistic against a boxy build with a hatch. Tail volume coefficients are
+> a sizing heuristic, not a stability calculation — the model never checks
+> that the tail it sized makes the aeroplane stable. Structural layout (spar
+> carry-through, joiners, hatch reinforcement) is invisible.
+
+---
+
+# 2. Lift and maximum lift coefficient
+
+Lift is `L = q S C_L`. What matters for a payload aircraft is `CL_max`, and
+it is not a constant.
+
+**Finite-wing correction.** A 2-D section coefficient is reduced for finite
+span and for the reality of a built wing — hinge gaps, covering wrinkles,
+surface finish:
+
+```
+CL_max_3D = cl_max_2d · 0.82 · min(1, 0.80 + 0.04·AR)
+```
+
+**Reynolds correction.** A DBF wing runs at Re 150k–500k, below where
+section data is usually quoted, and high-camber sections lose more there
+than thin ones:
+
+```
+CL_max(Re) = CL_max_3D · (Re/Re_ref)^p,   clipped to [0.55, 1.08]
+p = 0.15 + 0.10 · max(0, cl_max_2d − 1.2)
+```
+
+The exponent scales with the section's own camber, so S1223 (cl_max 2.20)
+is docked harder than MH32 (1.28). Quoting S1223 at 2.20 on a 9-inch chord
+is exactly the optimism this exists to prevent.
+
+**Stall speed.** Since `Re = V c / ν`, stall speed appears on both sides.
+Rather than iterate it is solved as a root:
+
+```
+find V such that   max_lift(V) − nW = 0
+```
+
+`max_lift` is monotone increasing in `V` (both terms scale with `V²` and
+`CL_max` rises with `Re`), so the root is unique and bracketed, and Brent
+reaches machine precision. A damped fixed-point iteration used to leave
+0.03% on the table.
+
+> **Assumptions.** The 0.82 built-wing factor. The camber-scaled Reynolds
+> exponent. Section data (`cl_max_2d`, `cd_min`, `Cm`, `t/c`) for 20
+> airfoils is literature-typical, not XFOIL runs at your Reynolds number.
+>
+> **Distance from reality.** No stall progression — the wing is either below
+> `CL_max` or not. No partial separation, no tip stall, no hysteresis, no
+> distinction between a gentle and a vicious stall, which is exactly what
+> separates two sections with the same `CL_max`. The Reynolds exponent is a
+> plausible fit, not measured. No surface-roughness or boundary-layer-trip
+> effects. Ground effect appears only in the takeoff roll. **Direction of
+> error: `CL_max` is probably still optimistic** — a built wing with a
+> hatch, payload door and control-surface gaps loses more than 18%.
+
+---
+
+# 3. Drag
+
+```
+CD = CD0 + k_drag (CL − CL_opt)² + stall_rise(CL) + CL²/(π AR e) + D_tail/qS
+```
+
+**Parasite drag** is a component sum, each referenced to wing area:
+
+- **Wing**: the 2-D section `cd_min`, Reynolds-corrected by
+  `(Re_ref/Re)^0.15`, × 1.05 for gaps and finish. A section `cd` already
+  counts both surfaces and is referenced to chord, so it maps onto `CD0`
+  one-for-one — **no wetted-area factor**. An earlier version double-counted
+  this and inflated `CD0` by 0.012.
+- **Fuselage**: `Cf · FF · S_wet/S`, form factor `FF = 1 + 60/f³ + f/400`
+  for fineness ratio `f`, with `Cf` blending laminar `1.328/√Re` and
+  turbulent `0.074/Re^0.2` at a 10% laminar run.
+- **Tails**: the same, at 20% laminar run and assumed AR 4.
+- **Discrete**: landing gear 0.0040 m², 0.0015 m² per motor beyond the
+  first, deployed sensor 0.0045 m², each as `CD·A/S`.
+- **+10%** interference on the total.
+
+**Induced drag** uses Raymer's straight-wing span efficiency,
+`e = 1.78(1 − 0.045 AR^0.68) − 0.64`, × 0.96 for a rectangular planform.
+
+**Minimum drag in closed form.** For a parabolic polar `CD = CD0 + kCL²`,
+`D/L` is minimised at `CL = √(CD0/k)`, where `CD = 2·CD0`, giving
+
+```
+(L/D)max = 1/(2√(CD0·k))          D_min = 2W√(CD0·k)
+```
+
+The real polar adds camber drag, a stall rise and trim on top, so this is a
+genuine **lower bound** — which is what makes it safe for the search's
+pre-screen to reject designs with.
+
+> **Assumptions.** Flat-plate skin friction with form factors. Laminar-run
+> fractions of 10% (fuselage) and 20% (tails). A flat 10% interference
+> allowance. The three discrete drag areas.
+>
+> **Distance from reality.** No propeller slipstream over wing or tail,
+> which on a 3–4 motor layout is a real effect and not small. No cooling
+> drag for motors or ESCs. No drag from the payload door, hatch seams,
+> antennas, or the sensor aperture when closed. Interference is one number
+> standing in for wing-fuselage, nacelle-wing and tail-fuselage junctions
+> that behave differently. **Direction of error: `CD0` is probably
+> optimistic for a first-build airframe** — measured CD0 on student aircraft
+> commonly lands 10–20% above a clean buildup like this.
+
+---
+
+# 4. Longitudinal trim — the empennage carries load
+
+**The tail is not a passive drag item. It carries part of the lift.**
+
+Take moments about the CG. The wing contributes its aerodynamic-centre
+moment plus its lift acting at the CG-to-AC offset; the tail contributes its
+lift at the tail arm:
+
+```
+M_ac + L_w (x_cg − x_ac) − L_t l_t = 0
+```
+
+Write the offset in chords, `k = (x_cg − x_ac)/c`, and use the fact that
+wing and tail together carry the load, `L_w + L_t = L` (with `L = nW`):
+
+```
+Cm_ac q S c + (L − L_t) k c − L_t l_t = 0
+Cm_ac q S c + L k c = L_t (l_t + k c)
+```
+
+giving
+
+```
+L_t = c (Cm_ac q S + L k) / (l_t + k c)
+```
+
+**Two terms, and both matter.** The **camber** term `Cm_ac q S c` is
+negative for a cambered section, so it demands a tail *download*, and scales
+with `q` only. The **CG** term `L k c` scales with the load being carried,
+so with the CG aft of the wing AC it is an upload that grows with load
+factor. Worked example, baseline aircraft at 24 m/s:
+
+| load factor | tail load | CL_t | wing carries |
+|---|---|---|---|
+| 1.0 g | −12.3 N | −0.21 | 97.1 N (to support 84.8 N) |
+| 2.0 g | −10.2 N | −0.18 | 179.7 N |
+| 3.0 g | −8.1 N | −0.14 | 262.4 N |
+
+An earlier version had only the camber term, holding the tail load constant
+at −14.7 N through a 3 g turn. That was wrong and is fixed.
+
+**Consequences propagated through the model.**
+
+*Wing lift*: the wing carries `L − L_t`, which under a download is **more**
+than the aircraft weight, so `CL_wing = (L − L_t)/(qS)`.
+
+*Trim drag*: the tail's lift makes induced drag of its own,
+`D_tail = L_t²/(q π b_t² e_t)`, with `b_t = √(AR_t·S_h)` and `e_t = 0.85`.
+
+*Maximum lift*: the wing stalls when `L_w = q S CL_max`. Substituting into
+the trim relation and solving for the total load:
+
+```
+L_max = [ q S CL_max (l_t + k c) + Cm_ac q S c ] / l_t
+```
+
+*Tail stall*: `CL_t = L_t/(q S_h)` is checked against 1.10 in level flight
+**and** at limit load. A design that cannot trim without stalling its own
+tail is rejected.
+
+This is why S1223 (Cm = −0.28) pays for its lift and MH32 (−0.06) does not.
+Without the trim term the high-camber sections would win for free.
+
+> **Assumptions.** CG sits 0.05 c aft of the wing aerodynamic centre
+> (`cg_aft_of_ac_frac`). Tail `CL_max` 1.10, tail span efficiency 0.85, tail
+> AR 4. `Cm_ac` constant with angle of attack.
+>
+> **Distance from reality.** **Static margin is an input, not an output.**
+> The model trims to a CG you specify and checks the tail can do it, but it
+> never computes the neutral point and never tells you whether the aeroplane
+> is stable — that is an AVL job. No downwash from the wing changing the
+> tail's effective angle of attack, which would raise the required
+> incidence and its drag. No elevator deflection or hinge moments, and no
+> distinction between a loaded surface and a deflected one. The vertical
+> tail carries no load, because there is no sideslip case. CG shift as
+> payload is loaded, or as the sensor deploys in Mission 3, is not modelled.
+
+---
+
+# 5. Propulsion
+
+**Motor** (first-order DC machine, `Vt` at the terminals):
+
+```
+I = (Vt − RPM/Kv)/Rm          Q = Kt (I − I0)        Kt = 60/(2π Kv)
+```
+
+**Propeller** (`n` rev/s, diameter `D`, advance ratio `J = V/(nD)`):
+
+```
+T = Ct(J) ρ n² D⁴             Q = Cp(J) ρ n² D⁵/(2π)
+```
+
+**Battery sag** couples them: pack voltage depends on current, current on
+rpm, rpm on voltage. The obvious treatment is to iterate. It is not
+necessary — for a given rpm the loop closes in closed form:
+
+```
+I     = (throttle·Vpack − 60n/Kv)/Rm
+Ibatt = N·I·throttle
+Vpack = Vocv − Ibatt·R
+```
+
+Substituting the first two into the third, with `a = N·throttle·R/Rm`:
+
+```
+Vpack = Vocv − a(throttle·Vpack − 60n/Kv)
+Vpack(1 + a·throttle) = Vocv + a(60/Kv)n
+
+Vpack(n) = (Vocv + a(60/Kv)n) / (1 + a·throttle)
+```
+
+So the whole system reduces to **one scalar equation in n** — motor torque
+equals propeller torque — solved by Brent to machine precision in about ten
+evaluations. No sag iteration, therefore no iteration-truncation error, and
+roughly six times faster than iterating.
+
+**The bracket is guaranteed.** At `n_noload = Kv·throttle·Vocv/60` the closed
+form gives `Vpack = Vocv` exactly and `I = 0`, so the residual is
+`−Kt·I0 − Q_prop < 0`. At `n → 0` it is positive whenever the motor can turn
+the prop at all.
+
+Verified against a 200-iteration brute-force fixed point: **3×10⁻¹³ N**.
+
+**Propeller coefficients** are a parametric pitch/diameter fit with
+`Ct(J) = Ct0(1 − J/Jz)` and `Cp(J) = Cp0(1 − 0.75 J/Jz)`, anchored on two
+quantities at once:
+
+```
+FOM     = Ct0^1.5 / (1.2533 Cp0)          static figure of merit
+eta_max = 0.444 · Jz · Ct0/Cp0            peak propulsive efficiency
+```
+
+The `0.444` comes from maximising `η = J·Ct/Cp`. With `x = J/Jz`,
+`η ∝ x(1−x)/(1−0.75x)`; setting `dη/dx = 0` gives `x = 2/3` and value
+`0.444`. So peak efficiency lands at two-thirds of the zero-thrust advance
+ratio — about 0.8 of geometric pitch speed, where real propellers peak. The
+fit gives FOM 0.71 → 0.52 and `eta_max` 0.70 → 0.78 as pitch rises.
+
+**Deliberate pessimism**, because catalogue numbers are cold-bench numbers:
+motor resistance is the **hot** value (Rm × 1.25), installed thrust is 95%
+of free-air, and usable battery energy is chemistry-specific — LiPo 80%,
+Li-ion 85%, NiMH 70%, NiCd 75% — with a further 8% held back for landing.
+
+> **Assumptions.** Rm × 1.25 for temperature. 95% installation factor. ESC
+> efficiency 95–96%, sized automatically with 20% current headroom. Motor,
+> cell and ESC catalogue values are representative, not data-sheet; every
+> record carries a `source` field saying so.
+>
+> **Distance from reality.** **The propeller fit is the single largest
+> source of model error** — replace it with thrust-stand data or the UIUC
+> database via `--props-csv`. Motor resistance is one fixed hot value, not a
+> temperature rising through the flight, so a long Mission 3 is flattered.
+> No ESC timing, commutation loss or throttle lag. Battery internal
+> resistance is constant: no temperature effect, no voltage recovery between
+> missions, no ageing across a weekend. Multi-motor installations assume
+> identical, non-interacting motors — no asymmetric thrust, no
+> one-engine-inoperative case, and no accounting for four small propellers
+> interacting with the wing differently from one large one.
+
+---
+
+# 6. Weight and structure
+
+The mass breakdown is **itemised** — wing skin, wing spar, motors,
+propellers, ESCs, battery, fuselage and tails are separate lines, so each
+can be checked against a scale.
+
+**Spar sizing from root bending.** Elliptical spanwise loading puts the
+centroid of each half-wing's lift at `4/(3π) ≈ 0.4244` of the semi-span, so
+at ultimate load:
+
+```
+M_root = n_ult · (W/2) · 0.4244 · (b/2)
+```
+
+For a thin-walled tube of radius `r` and wall `t`, `I = π r³ t` and the
+section modulus is `Z = I/r = π r² t`, so from `σ = M/Z`:
+
+```
+t_req = M_root / (σ_allow π r²)
+```
+
+with `r = 0.40 · (t/c) · c_root`, the largest tube fitting the section. Mass
+follows from the tube volume, × 0.6 for spanwise taper and × 1.8 for webs,
+joiners and root fittings:
+
+```
+m_spar = 0.6 · (2π r t) · ρ_spar · b · 1.8
+```
+
+**The result that matters:** on most of these designs `t_req` comes out
+*below* the thinnest wall you can lay up or buy (0.6 mm), so the spar is
+**gauge-limited, not strength-limited** — true for 24 of 25 finalists in the
+last search. The load factor then costs nothing, and a thinner layup would
+save real weight. The report says when this is the case.
+
+**Mass convergence.** Structure depends on gross weight; gross weight
+contains structure. The fixed point `MTOW ← payload + propulsion +
+structure(MTOW)` is a strong contraction — derivative ≈ 0.04, because only
+the spar and gear respond to weight — so it is iterated **undamped** and
+reaches 1e-10 kg in four or five passes. A cautious 50/50 damping raised the
+contraction factor to 0.52 and needed more than twenty.
+
+> **Assumptions.** Areal densities: wing 1.10 kg/m², tails 0.90 kg/m²,
+> fuselage 1.40 kg/m² of wetted area. Carbon spar at 600 MPa working stress,
+> 1600 kg/m³, 0.6 mm minimum wall. Landing gear 0.080 kg + 3% MTOW. Six 20 g
+> servos, 0.10 kg avionics, 0.15 kg sensor deploy mechanism, 8% of payload
+> for restraint, **8% contingency** on the airframe.
+>
+> **Distance from reality.** **Calibrate the areal densities against your
+> own airframe** — weigh last year's wing and divide by planform area. They
+> are the second-largest source of model error after the propeller. Only
+> bending sizes the spar: no torsion, no shear web sizing, no buckling, no
+> aeroelastic deflection or flutter. No landing loads, no fatigue, no crash
+> case. Joiners and multi-panel construction are a blanket ×1.8. Nothing
+> distinguishes a first article from a well-developed third one.
+
+---
+
+# 7. Design loads — a V-n diagram, not a guess
+
+Limit load is the worst of three cases, capped by a fourth.
+
+**Manoeuvre.** The sustained turn the mission actually flies, with a pilot
+who overshoots:
+
+```
+n = 1/cos(φ) × overshoot = 1/cos(70°) × 1.15 = 3.36
+```
+
+**Gust (Pratt).** A discrete gust changes angle of attack by `U/V`, so
+
+```
+ΔL = ½ρV²S·a·(U/V) = ½ρV S a U      ⟹      Δn = ρ V a U / (2 W/S)
+```
+
+A rigid aircraft would feel all of that; a real one has time to respond,
+which the Pratt alleviation factor captures through the mass ratio:
+
+```
+μ  = 2(W/S)/(ρ c a g)
+Kg = 0.88μ/(5.3 + μ)
+n  = 1 + Kg ρ V a U / (2 W/S)
+```
+
+evaluated at cruise with a 25 ft/s gust and at `V_D = 1.25 V_c` with half of
+it. **Note `W/S` in the denominator: light wing loading means a bigger gust
+load.** Model aircraft are more gust-critical than full-scale, which is why
+these designs come out at 5–7 g and not the 4.5 g originally assumed.
+
+**Aerodynamic ceiling.** You cannot pull more g than the wing can generate,
+so the limit is capped at `n = q_D S CL_max / W`. Sizing a spar for a load
+the wing physically cannot produce is wasted weight.
+
+**Ultimate = 1.5 × limit**, the standard factor of safety. Normal flight —
+the turn model — is held inside *limit*, not ultimate.
+
+Worked results, showing which case governs changes with the design:
+
+| design | governed by | ultimate |
+|---|---|---|
+| 1.6 m span, AR 6, light | gust at cruise | 5.98 g |
+| 1.8 m span, AR 12 | gust at cruise | 5.54 g |
+| 1.0 m span, AR 6 | manoeuvre | 5.04 g |
+| 1.8 m span, heavy payload | wing CLmax ceiling | 4.74 g |
+
+> **Assumptions.** 25 ft/s rough-air gust at cruise, half at dive speed.
+> `V_D = 1.25 V_c`. 1.15 pilot overshoot. 1.5 safety factor. A 2.5 g floor.
+> Set `ultimate_load_factor_override` if tech inspection specifies a wing
+> test instead.
+>
+> **Distance from reality.** The gust is a discrete vertical gust with an
+> alleviation factor borrowed from FAR 23 — real turbulence is a continuous
+> spectrum, and a low-flying model sees terrain-driven gusts this does not
+> represent. No landing-impact case, no ground-handling case, no asymmetric
+> or rolling-pullout case, no negative-g case. Only the wing is sized; the
+> fuselage, tail and gear carry assumed areal densities regardless of load.
+
+---
+
+# 8. Mission simulation
+
+Each straight and the ground roll are one ODE in time:
+
+```
+y = [V, x_ground, E]
+
+dV/dt     = (T(V) − D(V))/m
+dx_gnd/dt = V − w            (w = headwind, so this is ground speed)
+dE/dt     = P_elec(V)
+```
+
+integrated with classical **RK4** (local error `O(h⁵)`, global `O(h⁴)`).
+Energy is a *state*, not a sum tacked on afterwards, so it carries the same
+order of accuracy as the time.
+
+**Events are solved for, not stepped past.** Two of them: the point where
+the pilot must cut power to arrive at the turn at corner speed, and the end
+of the leg. Each is located by bisection on the length of the final RK4
+step, so the integrator lands *on* the event. This is what makes the answer
+step-size independent — identical to five decimals from `dx = 24 m` down to
+`0.75 m`.
+
+**Power-off deceleration distance.** From `m V dV = −D dx`:
+
+```
+x = ∫ m V / D(V) dV     from V_target to V_now
+```
+
+evaluated with 5-point Gauss–Legendre, exact for polynomials to degree 9.
+
+**Turns** are sustained and level, so `L = nW` and
+
+```
+turn rate ω = g√(n² − 1)/V          t_turn = θ/ω
+```
+
+`n` is the smallest of the CLmax limit, the thrust limit (Brent on
+`T(V) = D(V, nW)`), the structural limit and the bank limit. The corner
+speed — the `V` maximising `ω` — comes from a coarse scan plus
+golden-section refinement, because a bare scan returns the best *sample*,
+not the best *value*.
+
+**Turn time never involves turn radius**, so nothing has to be assumed about
+the geometry of the 360 at midfield. It falls out of how hard each design
+can turn.
+
+**Takeoff** integrates `m dV/dt = T − D − μ(W − L)` with `CL_ground = 0.35`,
+`μ = 0.035`, and induced drag reduced by the ground-effect factor
+`Φ = (16h/b)²/(1 + (16h/b)²)`. Airspeed at brake release equals the
+headwind. Rotation at 1.15 `V_stall`.
+
+**Landing** is simulated — descent at 3 m/s, approach at 1.30 `V_stall`, a
+3 s flare, then a braked rollout at `μ = 0.30`. Its energy is charged to the
+battery and a design that cannot land on what it has left is infeasible. Its
+*time* is deliberately excluded from the scored mission time, because the
+rules stop the clock as the aircraft crosses the line.
+
+> **Assumptions.** Full throttle on the straights, power off at the last
+> moment that still allows arrival at corner speed. 70° maximum bank. 30 m
+> pattern altitude, best-rate climb, with ground distance covered credited
+> against the first lap. State of charge frozen within a lap, re-simulated
+> when it drifts by 0.08. Wind is a steady component along the runway.
+>
+> **Distance from reality.** **This is a perfect pilot.** No reaction time,
+> no line-of-sight limits, no wide turns, no dropped laps, no go-arounds, no
+> judge timing variance. Real lap times are slower and more variable, and
+> the gap is not small. Turns are flown at exactly corner speed with no
+> energy traded through them — a real pilot descends slightly and climbs
+> out. Wind has no gusts, no gradient and no crosswind, and turn *ground
+> track* ignores wind drift (turn rate is exact). Windmilling propeller drag
+> during the power-off glide is not added, which flatters the deceleration.
+> The sensor light-mode sequencing is assumed always achievable on command,
+> and the risk of failing to deploy or stow the sensor — a real Mission 3
+> failure mode — is not modelled at all.
+
+---
+
+# 9. Scoring
+
+```
+M1 = 1.0                                          (successful flight)
+M2 = 1 + N(weight/time)       / Max(weight/time)
+M3 = 2 + N(#laps × sensor wt) / Max(#laps × sensor wt)
+```
+
+`Max(...)` defaults to **the best design in your own run**
+(`--normalise self`), so candidates are ranked against each other; the
+winner scores exactly 1.0 on each ratio and 6.0 overall. `--normalise field`
+compares against `--field-m2` / `--field-m3` instead and **caps each ratio at
+1.0**, because in the real competition `Max` includes you — beating your own
+estimate just makes you the new `Max`.
+
+Three consequences the tool takes seriously:
+
+- **A failed mission scores 0**, not a small number. A completed Mission 3
+  is worth 2.0 before its ratio term even starts, so reliability dominates.
+- **Sensor weight scores twice** — it is part of the Mission 2 scored weight
+  *and* it multiplies Mission 3. A simulator only does the first.
+- **The Pareto front** of raw `weight/time` against raw `laps × sensor
+  weight` is always printed, so you can see the M2/M3 trade without
+  committing to any normalisation.
+
+> **Assumptions.** Mission 1 is treated as pass/fail, 3 laps. The same
+> airframe flies all three missions; only the payload changes. Landing is
+> required to score but excluded from the scored time.
+>
+> **Distance from reality.** The design report score and the total
+> competition score are not modelled, so this optimises the *flight* score
+> only — and the report is worth as much as the missions. Tech inspection is
+> not modelled beyond payload count and the span limit. No attempt is made
+> to model the *probability* of a failed flight, which for a marginal design
+> is the dominant term in the expected score.
+
+---
+
+# 10. The search
+
+Mixed categorical / integer / continuous with a simulation in the objective,
+so no single global method fits. Four stages:
+
+1. **Propulsion screen** — every motor × prop × count × pack at two
+   operating points, no lap simulation. Rejects anything that over-currents
+   a motor, over-Cs a pack or overspeeds a tip. Keeps a *diverse* shortlist:
+   the best few per motor, not the global best.
+2. **Coarse sweep** — shortlist × airfoils × Latin hypercube over the
+   continuous variables. Payload is sampled against the lifting capacity the
+   power system actually has, so samples are flyable.
+3. **Refinement** — bounded Nelder-Mead on (span, aspect ratio, sensor mass,
+   simulator mass), then an exhaustive sweep of the integer simulator count
+   — the objective is genuinely non-smooth there, because the bay repacks in
+   discrete steps — then a short re-refinement.
+4. **Final scoring** — self-normalisation against the finished population,
+   Pareto front, dossier and bill of materials.
+
+A **cheap pre-screen** rejects hopeless designs in 0.02 ms instead of 145 ms
+using genuine physical *lower* bounds: minimum drag `D_min = 2W√(CD0·k)` and
+the propeller's zero-thrust speed ceiling. Because they are lower bounds it
+cannot reject a design the simulator would have accepted — audited against
+the full simulator, **zero false negatives**.
+
+> **Assumptions.** The staged structure itself: that a design rejected on
+> ratings at stage 1 would not have won, and that Latin-hypercube starts
+> plus a diverse shortlist find the global optimum.
+>
+> **Distance from reality.** **Nelder-Mead is a local method.** The staged
+> search is a defence against local optima, not a guarantee. The catalogue
+> is a sample of what you can buy, not the continuum of what exists. The
+> objective is often flat — in one search only 3 of 25 finalists were within
+> 2% of the best — so the *ranking* is less meaningful than the performance
+> level, and you should choose on buildability among the leaders.
+
+---
+
+# 11. Numerical accuracy
+
+Measured, not asserted. `python dbf.py --convergence` reproduces all of it.
+
+| Source | Method | Measured error |
+|---|---|---|
+| Mission ODE (lap time, energy) | RK4 + bisection event location | **1×10⁻⁵ s** across dx from 24 m to 0.75 m |
+| Propulsion operating point | closed-form battery sag + Brent | **3×10⁻¹³ N** vs 200-iteration brute force |
+| Mass fixed point | undamped iteration with guard | **0.000 kg** residual |
+| Stall speed | Brent on `max_lift(V) − nW` | machine precision |
+| Power-off deceleration | 5-point Gauss–Legendre | exact to polynomial degree 9 |
+| Corner speed, best climb, best L/D | scan + golden section | bracketed to 10⁻⁴–10⁻⁶ |
+
+The lap-time answer is independent of the integration step over a 32× range,
+so `dx` is chosen for speed and **every search stage uses the same one** —
+designs are screened on exactly the model that scores them. There is no
+interpolation anywhere in the propulsion system; a lookup table was tried
+and measured *slower* than the exact solve, so it was deleted.
+
+> **Assumptions.** That the quantities above are the ones worth converging.
+>
+> **Distance from reality.** **Numerical accuracy is not physical accuracy.**
+> Every number in that table says the equations are solved exactly; none of
+> it says the equations are right. Model error is a few percent at best and
+> is dominated by the propeller fit and the structural densities.
+
+---
+
+# 12. Validation
+
+Three suites, all passing.
+
+**`--selftest` — 117 invariants.** Things that must be true of any
+aeroplane: propeller figure of merit and peak efficiency in physical bands,
+thrust falling with airspeed, current falling as the prop unloads, battery
+sag, a drag polar with an interior minimum, stall speed scaling with weight,
+wing + tail lift equal to total lift at every load factor, tail CL inside
+its own stall, spar mass monotone in load factor through the gauge-limited
+regime, landing excluded from the scored window, and every bound of the
+three scoring formulas. Also the numerical methods themselves: RK4's
+convergence order, Gauss–Legendre exactness to degree 9, PCHIP
+non-overshoot, Brent beating bisection, and the closed-form battery-sag
+algebra against brute-force iteration.
+
+**`--validate` — 602 checks.** What invariants miss:
+
+- **Catalogue integrity** — every airfoil, propeller, motor, cell and ESC,
+  not just the sampled ones. Energy densities inside chemistry-specific
+  bands, motor power and current ratings mutually consistent, no propeller
+  with negative Cp or non-monotone thrust.
+- **Independent bounds** — simulated lap time and energy checked against
+  hand calculations that never touch the simulator.
+- **Energy bookkeeping** — average power never exceeds what the system can
+  physically draw; total time equals scored time plus landing.
+- **Determinism** — identical inputs give identical outputs, results are
+  independent of the instance cache, the operating-point memo never goes
+  stale.
+- **Round trip** — export a design to JSON, read it back, rescore unchanged.
+- **Trends across the catalogue** — more area lowers stall speed for *every*
+  airfoil; wind and thin air never speed a mission up.
+- **Interfaces** — every CLI flag reaches the config value it claims to.
+- **Score ceilings** — a self-normalised score can never exceed 6.0.
+
+**`--convergence`** — the error study in §11.
+
+> **Distance from reality.** All of this validates internal consistency and
+> numerical accuracy. **None of it validates the model against a real
+> aeroplane.** That comes from a thrust stand, a scale, and a flight.
+
+---
+
+# 13. Usage
+
+```bash
+python dbf.py --quick                             # fast look
+python dbf.py --thorough --wind 6 --altitude 400  # the run to actually make
+python dbf.py --evaluate results/best_design.json # one design + its BOM
+```
+
+| Flag | Default | Meaning |
+|---|---|---|
+| `--max-span-in` | 72 | span limit; the 6 ft rule |
+| `--max-wh` | 100 | battery energy cap |
+| `--sensor-max` | 20 lb | search bound only; no rules cap exists |
+| `--max-sim` | 40 | cap on simulators the search will try |
+| `--lap-ft` | course | rescale the straights, keeping the turns |
+| `--wind` / `--altitude` / `--temp` | 4.5 / 0 / 15 | conditions |
+| `--normalise` | self | `self` or `field` |
+| `--props-csv` / `--motors-csv` | — | load measured data |
+| `--processes` | cpu−1 | worker count |
+| `--audit <csv>` | — | which catalogue options reached the finals |
+| `--version` | — | print the version |
+
+Outputs land in `results/`: `ranked_designs.csv`, `pareto_front.csv`,
+`bill_of_materials.csv`, `best_design.json`.
+
+The report prints an **ACTIVE CONSTRAINTS** section naming any variable
+pinned to a bound. A pinned variable means the bound is the answer, not the
+physics — widen it and re-run. The only bound that *should* pin is the 6 ft
+span rule.
+
+---
+
+# 14. The rules, as given
+
+| | |
+|---|---|
+| Course | 2 × 1000 ft straights, 180° at each end, 360° loop at the midpoint of the second straight → 2000 ft straights, 720° turning |
+| Wingspan | **6 ft maximum** |
+| Takeoff distance | **no limit** (roll still reported) |
+| Battery | 100 Wh total; LiPo, Li-ion, NiMH, NiCd all legal |
+| Window | 300 s for M2 and M3 |
+| M2 laps | 5 |
+| Simulators | **no cap** on count or mass |
+| Sensor | **no mass cap** |
+| Container | one fixed box, 230 × 150 × 150 mm, 0.5 lb tare |
+| Landing | required to score, **not** in the scored time window |
+
+The container box comes from the drop-test calculation for a ~1 kg sensor: a
+5 ft drop reaches 5.47 m/s, holding the sensor under 75 g needs a 20 mm
+crush stroke (`s = v²/2ag`), and foam crushes usefully through ~70% of its
+thickness, so 29 mm of foam per face. It is **not** resized per design.
+
+Because there is no sensor mass cap, a heavier sensor is simply a **denser**
+one. The report states the density it would need — water 1000, aluminium
+2700, steel 7850, lead 11340 kg/m³ — and rejects only densities above lead,
+which are impossible rather than merely awkward.
+
+---
+
+# 15. What to fix first
+
+In order of how much it will move the answer:
+
+1. **Measure three propellers** on a thrust stand, or pull the UIUC
+   database, and load with `--props-csv`. The parametric fit is the largest
+   single source of model error.
+2. **Weigh last year's wing and fuselage** and put the areal densities into
+   `BuildStandard`. Second largest.
+3. **Decide how dense a sensor you will actually build.** There is no mass
+   cap and it scores in both missions, so the optimiser pushes it until the
+   aerodynamics push back; the report tells you the ballast implied.
+4. **Check the derived load factor** against whatever wing test tech
+   inspection runs, and set the override if it specifies one.
+5. **Validate the winner in XFLR5/AVL** — especially static margin, which
+   this model takes as an input and never checks.
+
+---
+
+# 16. Development layout
+
+This is the *source* layout, not what you need to run the tool. Everything
+below is fused into `dbf.py`.
+
+```
+dbf.py                 the entire tool as one file (generated)
+build_single_file.py   regenerates dbf.py from the package
+
+dbf2027/
+  units.py          unit conversions (everything internal is SI)
+  numerics.py       Brent, Gauss-Legendre, RK4, PCHIP, golden section,
+                    Latin hypercube, Nelder-Mead, Richardson/GCI
+  config.py         environment, course, rules, build standard
+  components.py     airfoil, motor, propeller, cell, ESC catalogues
+  payload.py        fixed container, sensor envelope, bay packing
+  loads.py          V-n diagram: manoeuvre, gust, CLmax ceiling
+  aerodynamics.py   lift, drag, Re-dependent CLmax, longitudinal trim
+  weights.py        itemised mass buildup, spar sizing
+  propulsion.py     motor/prop torque balance, closed-form battery sag
+  aircraft.py       design vector -> sized aeroplane
+  mission.py        takeoff, climb, turns, laps, landing, M1/M2/M3
+  scoring.py        the three scoring formulas
+  optimizer.py      four-stage search
+  report.py         dossier, Pareto table, bill of materials
+run_optimizer.py    CLI
+selftest.py         117 invariants
+validate.py         602 integrity, bounds, loads, determinism, interfaces
+grid_convergence.py numerical error study
+analyse_results.py  audit which catalogue options reached the finals
+```
+
+Rebuild after any change to the package:
+
+```bash
+python build_single_file.py && python dbf.py --selftest && python dbf.py --validate
+```
