@@ -1,0 +1,109 @@
+% DBF 2026-27 sensitivity of TOTAL MISSION SCORE (fixed version) 
+
+
+% Mark 8
+
+
+%
+% Total Mission Score = M1 + M2 + M3 + GM
+%   M1 = 1
+%   M2 = 1   + [ N_(weight/time)      / Max_(weight/time) ]
+%   M3 = 2   + [ N_(laps x weight)    / Max_(laps x weight) ]
+%   GM = 0.5 + [ N_(weight x height)  / Max_(weight x height) ]
+%
+% Competition Score = Total Report Score * Total Mission Score + Participation,
+% so a % change in Total Mission Score is a % change in the fly-off part of the
+% competition score (participation points are a small additive term).
+%
+% One-at-a-time sweep of -50% to +50% around the bracket midpoints.
+
+clear; clc; close all;
+
+%% ---------------- 1. Brackets and baselines ----------------
+weight_bracket = [0.43, 2.15];        % total payload weight (same bracket used for M2, M3, GM)
+laps_bracket   = [4, 13];             % laps flown in M3
+time_bracket   = [23, 60] * 5;        % M2 total time for 5 laps -> [115, 300] s
+height_bracket = [1, 5];              % drop height, ft (60 in max = 5 ft)
+
+weight_base = mean(weight_bracket);
+laps_base   = round(mean(laps_bracket));   % FIX: laps must be an integer (mean = 8.5 -> 9)
+time_base   = mean(time_bracket);
+height_base = mean(height_bracket);
+
+fprintf('Baseline values:\n');
+fprintf('  Weight = %.4f\n', weight_base);
+fprintf('  Laps   = %d\n',   laps_base);
+fprintf('  Time   = %.4f\n', time_base);
+fprintf('  Height = %.4f\n\n', height_base);
+
+%% ---------------- 2. Fixed normalizers (Max_) ----------------
+Max_WT = weight_bracket(2) / time_bracket(1);
+Max_LW = laps_bracket(2)   * weight_bracket(2);
+Max_GH = height_bracket(2) * weight_bracket(2);
+
+%% ---------------- 3. Score model (constants included) ----------------
+M1_const = 1;
+M2_fun = @(w, t) 1   + (w ./ t)  / Max_WT;
+M3_fun = @(l, w) 2   + (l .* w)  / Max_LW;
+G_fun  = @(h, w) 0.5 + (h .* w)  / Max_GH;
+
+% Total mission score: every design input flows through the same function,
+% so weight is correctly counted in M2, M3 and the Ground Mission at once.
+Total_fun = @(w, l, t, h) M1_const + M2_fun(w, t) + M3_fun(l, w) + G_fun(h, w);
+
+Total_base = Total_fun(weight_base, laps_base, time_base, height_base);
+fprintf('Baseline mission scores:\n');
+fprintf('  M1 = %.3f\n  M2 = %.3f\n  M3 = %.3f\n  GM = %.3f\n', ...
+    M1_const, M2_fun(weight_base, time_base), ...
+    M3_fun(laps_base, weight_base), G_fun(height_base, weight_base));
+fprintf('  Total = %.3f\n\n', Total_base);
+
+%% ---------------- 4. One-at-a-time sweeps ----------------
+pct_change = -0.50:0.01:0.50;
+
+w_sweep = weight_base * (1 + pct_change);
+l_sweep = round(laps_base * (1 + pct_change));   % integer laps -> staircase
+t_sweep = time_base   * (1 + pct_change);
+h_sweep = height_base * (1 + pct_change);
+
+T_weight = Total_fun(w_sweep,     laps_base, time_base, height_base);
+T_laps   = Total_fun(weight_base, l_sweep,   time_base, height_base);
+T_time   = Total_fun(weight_base, laps_base, t_sweep,   height_base);
+T_height = Total_fun(weight_base, laps_base, time_base, h_sweep);
+
+pct = @(T) (T - Total_base) / Total_base * 100;
+
+%% ---------------- 5. Plot: % change in TOTAL mission score ----------------
+figure('Name','Sensitivity of Total Mission Score','Color','w');
+plot(pct_change*100, pct(T_weight), 'LineWidth', 2); hold on;
+plot(pct_change*100, pct(T_time),   'LineWidth', 2);
+plot(pct_change*100, pct(T_laps),   'LineWidth', 2, 'LineStyle', '--');
+plot(pct_change*100, pct(T_height), 'LineWidth', 2, 'LineStyle', ':');
+xlabel('Percent Change to Parameter (%)');
+ylabel('Percent Change to Total Mission Score (%)');
+title('Univariate Sensitivity of Total Mission Score');
+legend('Sensor weight (M2 + M3 + GM)', 'M2 time', 'M3 laps', 'Ground drop height', ...
+    'Location', 'best');
+grid on;
+xlim([-50 50]);
+xticks(-50:10:50);
+
+%% ---------------- 6. Tornado chart at +/-25% ----------------
+idx_lo = find(abs(pct_change + 0.25) < 1e-9);
+idx_hi = find(abs(pct_change - 0.25) < 1e-9);
+names  = {'Sensor weight', 'M2 time', 'M3 laps', 'Drop height'};
+lo = [pct(T_weight(idx_lo)), pct(T_time(idx_lo)), pct(T_laps(idx_lo)), pct(T_height(idx_lo))];
+hi = [pct(T_weight(idx_hi)), pct(T_time(idx_hi)), pct(T_laps(idx_hi)), pct(T_height(idx_hi))];
+
+[~, order] = sort(max(abs([lo; hi]), [], 1), 'ascend');   % largest bar on top
+figure('Name','Tornado (+/-25%)','Color','w');
+barh([lo(order); hi(order)]', 'stacked');
+set(gca, 'YTickLabel', names(order));
+xlabel('Percent Change to Total Mission Score (%)');
+title('Tornado: +/-25% change in each parameter');
+grid on;
+
+fprintf('Change in total mission score for +/-25%% parameter change:\n');
+for k = 1:numel(names)
+    fprintf('  %-14s  %+6.2f%%  /  %+6.2f%%\n', names{k}, lo(k), hi(k));
+end
