@@ -1,5 +1,6 @@
-prop_d = 0.559; % propeller diameter in meters
-rho = 1.075; %*1/2 is pressure coeffiecient
+%prop_d = 0.559; % propeller diameter in meters
+prop_d = .0254 * 17; %converts in to m 
+rho = 1.075; %*1/2 is pressure coefficient
 kt = 0.11;
 kp = 0.055;
 mass = 10.8862;
@@ -8,6 +9,12 @@ rad = 2*pi;
 %CQ = 0;
 %CT =0;
 %RPM = 0;
+
+%apc data is what the manufacturer predicts its purpose if reference
+%prediction
+%uiuc is experimental data its purpose is real world validation
+%our model's purpose is to evaluate our theoretical calculations to make
+%meaningful comparisons to the data sets
 
 
 logs = out.logsout; %can print all signals as matrix value
