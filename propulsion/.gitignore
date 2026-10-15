@@ -4,6 +4,10 @@
 *.autosave
 *.slx.r*
 *.mdl.r*
+# MATLAB temporary/generated files
+*.asv
+*.slxc
+slprj/
 
 # Derived content-obscured files
 *.p
@@ -38,3 +42,7 @@ codegen/
 # SimBiology backup files
 *.sbproj.backup
 *.sbproj.bak
+#test data folder
+data/
+
+
