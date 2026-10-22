@@ -10,7 +10,7 @@ rpm_list(4)
 static_data(4,11)
 %rev_per_sec = rpm_list(4)./60;
 rho;
-prop_d;
+prop_d
 rev_per_sec = rpm_list./60;
 rho_apc = data_thrust./(data_CT.*rev_per_sec.^2*prop_d^4) % approx 1.212
 rho_reference = 1.212;
