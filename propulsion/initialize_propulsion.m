@@ -1,5 +1,5 @@
 %prop_d = 0.559; % propeller diameter in meters
-prop_d = .0254 * 17; %converts in to m 
+prop_d = .0254 * 17 %converts in to m 
 rho = 1.075; %*1/2 is pressure coefficient
 kt = 0.11;
 kp = 0.055;
@@ -37,3 +37,10 @@ end
 %coefficient of drag in unitless and a constant = 
 %area = 
 %20 to 30 seconds to get to max speed
+
+% Chosen Motor: Scorpion SII-4025-520-KV
+Kv = 520; %RPM/V
+battery = 65; %LiPo
+nominal_v = 22.2; %A
+max_cont_current = 100; %A
+rated_power = 2000; %W
