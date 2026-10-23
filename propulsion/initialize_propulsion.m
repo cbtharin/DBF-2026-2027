@@ -16,6 +16,7 @@ rad = 2*pi;
 %our model's purpose is to evaluate our theoretical calculations to make
 %meaningful comparisons to the data sets
 
+out = sim(newest_singleprop); % runs simulink model automatically
 
 logs = out.logsout; %can print all signals as matrix value
 
