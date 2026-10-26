@@ -1,7 +1,10 @@
-function [rpm_list, static_data] = verify_static_data()
-
+function [rpm_list, static_data, prop_inches] = verify_static_data(filename)
+%use OG file unless another is specified
+if nargin < 1
+    filename = fullfile("reference_data", "PER3_17x10E.dat");
+end
 % first we read the file
-apc_text = fileread("reference_data/PER3_17x10E.dat");
+apc_text = fileread(filename);
 
 % extracting the RPM section headings %
 rpm_positions = strfind(apc_text, "PROP RPM")
@@ -15,12 +18,12 @@ for i=1:length(rpm_list)
     parts = split(get_rpm, "=");
     rpm_list(i) = str2double(parts(2));
 end
-rpm_list %display select PROPS
+rpm_list; %display select PROPS
 
 % initialize the data array using length so that for any amount of rpm
 % positions the parser will work
 static_data = zeros(length(rpm_positions), 15);
-size(static_data)
+size(static_data);
 
 
 for i=1:length(rpm_positions) % processes each of the 14 sections
@@ -39,7 +42,7 @@ section_line = splitlines(string(section)); % section line is an array of string
         row_data = sscanf(section_line(j), "%f");
         if ~isempty(row_data)
             if length(row_data) == 15 && row_data(1) == 0 % checks the result from sscanf() -> a col vector and validates length
-                disp("Line " + j + " of section " + i + " contains the static performance data");
+                %disp("Line " + j + " of section " + i + " contains the static performance data");
                 static_data(i, :) = row_data.'; % transpose the col to row vector
                 break;
             end
@@ -47,13 +50,7 @@ section_line = splitlines(string(section)); % section line is an array of string
     
     end
 end
-static_data(1, :)
-data_thrust = static_data(:, 11)
+static_data(1, :);
+data_thrust = static_data(:, 11);
 
 end
-
-%{
-rpm_thrust;
-rpm_CP; 
-rpm_CT;
-%}

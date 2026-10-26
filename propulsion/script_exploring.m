@@ -54,14 +54,14 @@ rpm_list %display select PROPS
 % trying to get a row of data %
 first_section = apc_text(rpm_positions(1): rpm_positions(2)-1);
 %subtract 1 bc the second postion is the first char of the next rpm heading
-lines = splitlines(string(first_section))
-static_row = sscanf(lines(5), "%f")
+lines = splitlines(string(first_section));
+static_row = sscanf(lines(5), "%f");
 %static_thrust = static_row(11)
 
 % example code line below
 static_data = zeros(14, 15);
-size(static_data)
-data_thrust = static_data(:, 11)
+size(static_data);
+data_thrust = static_data(:, 11);
 
 
 for i=1:length(rpm_positions) % processes each of the 14 sections
@@ -95,8 +95,8 @@ rpm_CT(i) = static_row(4);
 rpm_CP(i) = static_row(5);
     %}
 end
-static_data(1, :)
-data_thrust = static_data(:, 11)
+static_data(1, :);
+data_thrust = static_data(:, 11);
 
 
 
@@ -110,6 +110,6 @@ rpm_CT;
 % trying to get a row of data hardcoding %
 first_section = apc_text(rpm_positions(1): rpm_positions(2)-1);
 %subtract 1 bc the second postion is the first char of the next rpm heading
-lines = splitlines(string(first_section))
-static_row = sscanf(lines(5), "%f")
+lines = splitlines(string(first_section));
+static_row = sscanf(lines(5), "%f");
 %static_thrust = static_row(11)

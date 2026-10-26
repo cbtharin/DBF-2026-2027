@@ -1,14 +1,27 @@
 %prop_d = 0.559; % propeller diameter in meters
-prop_d = .0254 * 17 %converts in to m 
+prop_inches = 17;
+prop_d = .0254 * prop_inches; %converts in to m 
 rho = 1.075; %*1/2 is pressure coefficient
-kt = 0.11;
-kp = 0.055;
+% kt = 0.11;
+% kp = 0.055;
 mass = 10.8862;
 g = 9.81;
 rad = 2*pi;
-%CQ = 0;
-%CT =0;
-%RPM = 0;
+
+desired_rpm;
+
+% get file specs
+prop_file = fullfile("reference_data", "PER3_17x10E.dat");
+[prop_inches, pitch_inches] = extract_dimensions(prop_file);
+
+
+[rpm_list, static_data] = verify_static_data(prop_file);
+
+data_CT = static_data(:, 4);
+
+data_CP = static_data(:, 5);
+
+rho_reference = 1.212;
 
 %apc data is what the manufacturer predicts its purpose if reference
 %prediction
@@ -25,12 +38,12 @@ fprintf("Number of logged signals: %d\n\n", logs.numElements);
 for k = 1:logs.numElements
     signal = logs.getElement(k);
 
-    fprintf("Signal %d\n", k)
-    fprintf("  Name: %s\n", char(signal.Name))
+    fprintf("Signal %d\n", k);
+    fprintf("  Name: %s\n", char(signal.Name));
 
     % Extract the path from the BlockPath object
     blockPath = signal.BlockPath.getBlock(1);
-    fprintf("  Source: %s\n\n", blockPath)
+    %fprintf("  Source: %s\n\n", blockPath);
 end
 
 %wing surface area = 
