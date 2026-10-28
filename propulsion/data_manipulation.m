@@ -144,3 +144,11 @@ rho_apc = data_thrust ./ ...
 
 disp(rho_apc)
 fprintf("Mean implied APC density: %.4f kg/m^3\n", mean(rho_apc));
+
+% Linear Interpolation of Advance Ratios
+
+%f = (J - J1)/(J2 - J1);
+%Ct = Ct1 + f(Ct2 - Ct1);
+% Using Interp1 function in MATLAB
+%y_target = interp1(x_data, y_data, x_target);
+

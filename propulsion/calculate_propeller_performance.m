@@ -1,4 +1,4 @@
-function [thrust, shaft_power, torque] = calculate_propeller_performance(performance_data, ...
+function [thrust, shaft_power, torque, APC_reference] = calculate_propeller_performance(performance_data, ...
     rpm_list, rpm, airspeed, diameter, rho_reference)
 
 rpm_index = find(rpm_list == rpm); 
@@ -10,6 +10,9 @@ prop_table = performance_data{rpm_index};
 J_data = prop_table(:, 2);
 Ct_data = prop_table(:, 4);
 Cp_data = prop_table(:, 5);
+thrust_data = prop_table(:, 11);
+shaft_power_data = prop_table(:, 9);
+torque_data = prop_table(:, 10);
 
 % Convert RPM to revolutions per second
 n = rpm / 60;

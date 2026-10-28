@@ -2,13 +2,14 @@
 prop_inches = 17;
 prop_d = .0254 * prop_inches; %converts in to m 
 rho = 1.075; %*1/2 is pressure coefficient
+rho_sim = 1.212;
 % kt = 0.11;
 % kp = 0.055;
 mass = 10.8862;
 g = 9.81;
 rad = 2*pi;
-
-desired_rpm;
+airspeed_mph = [0, 10, 20, 30, 35, 40, 50, 60, 70, 76.1, 80];
+airspeed_values = airspeed_mph * 0.44704;
 
 % get file specs
 prop_file = fullfile("reference_data", "PER3_17x10E.dat");
@@ -16,9 +17,7 @@ prop_file = fullfile("reference_data", "PER3_17x10E.dat");
 
 
 [rpm_list, static_data] = verify_static_data(prop_file);
-
 data_CT = static_data(:, 4);
-
 data_CP = static_data(:, 5);
 
 rho_reference = 1.212;
