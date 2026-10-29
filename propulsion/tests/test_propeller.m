@@ -3,11 +3,23 @@ tests = functiontests(localfunctions);
 end
 
 function setupOnce(testCase)
-[rpm_list, perf] = extract_rpm_performance('PER3_17x10E.dat');
+
+test_dir = fileparts(mfilename('fullpath'));
+propulsion_dir = fileparts(test_dir);
+
+prop_file = fullfile(propulsion_dir, ...
+    'reference_data', 'PER3_17x10E.dat');
+
+[rpm_list, perf] = extract_rpm_performance(prop_file);
+
 testCase.TestData.rpm_list = rpm_list;
 testCase.TestData.perf = perf;
 testCase.TestData.D = 17 * 0.0254;
 testCase.TestData.rho = 1.212;
+
+% Save file path for other tests
+testCase.TestData.prop_file = prop_file;
+
 end
 
 function testKnownPoint7000(testCase)
@@ -38,8 +50,13 @@ end
 
 function testOutOfRangeJ(testCase)
 d = testCase.TestData;
-verifyError(testCase, @() calculate_propeller_performance(d.perf, d.rpm_list, 7000, 60, d.D, d.rho), ...
-    'prop:JOutOfRange');
+
+[T, P, Q] = calculate_propeller_performance( ...
+    d.perf, d.rpm_list, 7000, 60, d.D, d.rho);
+
+verifyTrue(testCase, isnan(T));
+verifyTrue(testCase, isnan(P));
+verifyTrue(testCase, isnan(Q));
 end
 
 % Next three functions protect a layer of the motor work
@@ -52,9 +69,14 @@ verifyEqual(testCase, size(d.perf{d.rpm_list == 8000}), [30 15]);
 end
 
 function testExtractDimensions(testCase)
-[D_in, pitch_in] = extract_dimensions('PER3_17x10E.dat');
+
+prop_file = testCase.TestData.prop_file;
+
+[D_in, pitch_in] = extract_dimensions(prop_file);
+
 verifyEqual(testCase, D_in, 17);
 verifyEqual(testCase, pitch_in, 10);
+
 end
 
 function testSweepShapeAndColumns(testCase)
@@ -66,3 +88,6 @@ verifyEqual(testCase, R(:,2).', [10 20 30 10 20 30]);
 [T, ~, ~] = calculate_propeller_performance(d.perf, d.rpm_list, 8000, 20, d.D, d.rho);
 verifyEqual(testCase, R(5,3), T, 'RelTol', 1e-12);
 end
+
+
+
