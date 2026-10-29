@@ -28,7 +28,6 @@ for i = 1:2
 end
 
 prop_inches = dimensions(1);
-prop_inches = prop_inches * 0.0254;
 pitch_inches = dimensions(2);
 
 end
