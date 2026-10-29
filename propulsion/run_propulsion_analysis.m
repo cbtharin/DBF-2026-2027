@@ -4,6 +4,9 @@
 clear;
 clc;
 
+%% load motor data
+motor_db;
+
 %% 1. Load propeller data
 
 prop_file = fullfile("reference_data", "PER3_17x10E.dat");
@@ -120,8 +123,23 @@ if ~isnan(rpm_lower_bound) && ~isnan(rpm_upper_bound)
         motor, rpm, voltage, ...
         performance_data, rpm_list, airspeed, prop_d, rho_reference);
     rpm_equilibrium = fzero(torque_error, [rpm_lower_bound, rpm_upper_bound]);
-    
+
     fprintf('Equilibrium RPM: %.2f\n', rpm_equilibrium);
 else
     fprintf('No torque equilibrium bracket found.\n');
 end
+
+%% 9. Evaluate Operating Conditions
+motor_results = calculate_motor_performance(motor, rpm_equilibrium, voltage);
+[thrust_eq, shaft_power_eq, torque_prop_eq] = ...
+    calculate_propeller_performance( ...
+    performance_data, rpm_list, rpm_equilibrium, ...
+    airspeed, prop_d, rho_reference);
+fprintf("Equilibrium Current: %d\n", motor_results.current);
+fprintf("Motor Torque: %d\n", motor_results.torque);
+fprintf("Efficiency: %d\n", motor_results.efficiency);
+fprintf("Feasibility: %d\n", motor_results.feasible);
+fprintf("Torque Balance: %d\n", torque_prop_eq);
+fprintf("Thrust @ Equilibrium: %d\n", thrust_eq);
+fprintf("Shaft Power @ Equilibrium: %d\n", shaft_power_eq);
+torque_residual = motor_results.torque - torque_prop_eq

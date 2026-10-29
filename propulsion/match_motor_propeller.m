@@ -1,6 +1,9 @@
 function delta_Q = match_motor_propeller(motor, rpm, voltage, ...
     performance_data, rpm_list, airspeed, prop_d, rho_reference)
 
+ % OUTDATED THIS IS FULLY FINISHED INSIDE SOLVE_MOTOR_PROP_MATCH
+
+
 % calculate motor performance
 motor_results = calculate_motor_performance(motor, rpm, voltage);
 
