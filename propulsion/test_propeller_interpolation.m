@@ -128,4 +128,19 @@ disp(max_errors);
 fprintf('Mean errors [Thrust, Power, Torque] (%%):\n');
 disp(mean_errors);
 
-
+% Compare Ct and Cp across RPMs at a fixed advance ratio
+J_test = 0.5;
+Ct_by_rpm = NaN(size(rpm_list));
+Cp_by_rpm = NaN(size(rpm_list));
+for i = 1:length(rpm_list)
+    prop_table = performance_data{i};
+    J_data = prop_table(:,2);
+    if J_test >= min(J_data) && J_test <= max(J_data)
+        Ct_by_rpm(i) = interp1(J_data, prop_table(:,4), J_test, 'linear');
+        Cp_by_rpm(i) = interp1(J_data, prop_table(:,5), J_test, 'linear');
+    end
+end
+% Create comparison table
+comparison = table(rpm_list(:), Ct_by_rpm(:), Cp_by_rpm(:), ...
+    'VariableNames', {'RPM','Ct','Cp'});
+disp(comparison)
