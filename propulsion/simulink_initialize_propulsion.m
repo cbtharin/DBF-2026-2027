@@ -27,8 +27,14 @@ rho_reference = 1.212;
 %uiuc is experimental data its purpose is real world validation
 %our model's purpose is to evaluate our theoretical calculations to make
 %meaningful comparisons to the data sets
-
-out = sim(newest_singleprop); % runs simulink model automatically
+% Build the 1-D lookup tables the baseline model's Aerodynamic Propeller block expects
+[rpm_list, performance_data] = extract_rpm_performance(prop_file);
+sim_rpm = 7000;                                   % the 1-D tables use one RPM section
+prop_table = performance_data{rpm_list == sim_rpm};
+J_lookup  = prop_table(:, 2);                     % advance ratio
+Ct_lookup = prop_table(:, 4);                     % thrust coefficient
+Cp_lookup = prop_table(:, 5);                     % power coefficient
+out = sim('singleprop_baseline'); % runs simulink model automatically
 
 logs = out.logsout; %can print all signals as matrix value
 

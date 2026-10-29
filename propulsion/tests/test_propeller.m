@@ -41,3 +41,28 @@ d = testCase.TestData;
 verifyError(testCase, @() calculate_propeller_performance(d.perf, d.rpm_list, 7000, 60, d.D, d.rho), ...
     'prop:JOutOfRange');
 end
+
+% Next three functions protect a layer of the motor work
+
+function testParserFindsAllSections(testCase)
+d = testCase.TestData;
+verifyEqual(testCase, d.rpm_list, 1000:1000:14000);
+verifyEqual(testCase, numel(d.perf), 14);
+verifyEqual(testCase, size(d.perf{d.rpm_list == 8000}), [30 15]);
+end
+
+function testExtractDimensions(testCase)
+[D_in, pitch_in] = extract_dimensions('PER3_17x10E.dat');
+verifyEqual(testCase, D_in, 17);
+verifyEqual(testCase, pitch_in, 10);
+end
+
+function testSweepShapeAndColumns(testCase)
+d = testCase.TestData;
+R = propulsion_analysis(d.perf, d.rpm_list, [7000 8000], [10 20 30], d.D, d.rho);
+verifyEqual(testCase, size(R), [6 5]);
+verifyEqual(testCase, R(:,1).', [7000 7000 7000 8000 8000 8000]);
+verifyEqual(testCase, R(:,2).', [10 20 30 10 20 30]);
+[T, ~, ~] = calculate_propeller_performance(d.perf, d.rpm_list, 8000, 20, d.D, d.rho);
+verifyEqual(testCase, R(5,3), T, 'RelTol', 1e-12);
+end
