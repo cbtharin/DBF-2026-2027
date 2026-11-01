@@ -27,7 +27,7 @@ function results = solve_motor_prop_match(motor, voltage, performance_data, ...
         delta_Q = match_motor_propeller(motor, rpm, voltage, ...
             performance_data, rpm_list, airspeed, prop_d, rho_reference);
 
-        fprintf('RPM: %.0f | Delta Q: %.3f Nm\n', rpm, delta_Q);
+        %fprintf('RPM: %.0f | Delta Q: %.3f Nm\n', rpm, delta_Q);
 
         if (~isnan(delta_Q_prev) && ~isnan(delta_Q) && ...
         delta_Q_prev * delta_Q < 0) % detect sign change) 
@@ -54,7 +54,7 @@ function results = solve_motor_prop_match(motor, voltage, performance_data, ...
         results.rpm = rpm_equilibrium;
     else
         results.feasible = false;
-        results.rpm = Nan;
+        results.rpm = NaN;
         fprintf('No torque equilibrium bracket found.\n');
         return;
     end
