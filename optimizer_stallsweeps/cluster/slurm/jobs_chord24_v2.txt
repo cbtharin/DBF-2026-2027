@@ -1,0 +1,12 @@
+# name | run_cluster.py arguments: the 24 in chord / stall-limit sweep again, on the 2026-10-14 physics:
+# each section's own zero-lift angle and lift slope from its polar (m109 - the old cm_ac estimate
+# overstated a high-camber wing's runway lift, the S1223's above all), winglets searched (m110), tails
+# sized from their requirements with the horizontal tail volume searched (m111, m112).  The last line
+# is the reference: the same search with no chord cap and no stall limit.
+#     sbatch --array=1-6 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_chord24_v2.txt
+chord24v2_stall30mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 30
+chord24v2_stall35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 35
+chord24v2_stall40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 40
+chord24v2_stall45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 45
+chord24v2_stall50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 50
+nolimit_v2 | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds

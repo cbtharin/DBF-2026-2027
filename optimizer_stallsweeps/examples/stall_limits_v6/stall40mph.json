@@ -1,0 +1,18 @@
+{
+  "span_m": 1.8287999999999998,
+  "chord_m": 0.3831597922081245,
+  "airfoil": "S1223",
+  "motor": "SCORPION_S5028_220",
+  "prop": "APC_22x12W",
+  "n_motors": 1,
+  "pack": "TATTU_RL_6S4500_95C",
+  "sensor_mass_kg": 12.477501737434892,
+  "n_simulators": 0,
+  "taper": 1.0,
+  "sensor_m3_kg": 12.446307983091305,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "wing_prop_layout": "mid",
+  "winglet_h_m": 0.27431999999999995,
+  "tail_vol_h": 0.9
+}

@@ -1,0 +1,10 @@
+# name | run_cluster.py arguments: one full-scale search per maximum stall speed (m101: rectangular wing;
+# the stall is power off at the Mission 2 weight, on the lift / 1.5, so the true stall is about 0.82 x the limit).
+#     sbatch --array=1-7 slurm/array.sbatch slurm/jobs_stall.txt      (or pick lines, e.g. --array=3,4)
+stall_none  | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds
+stall_60mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 60
+stall_55mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 55
+stall_50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 50
+stall_45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 45
+stall_40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 40
+stall_35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-stall-mph 35

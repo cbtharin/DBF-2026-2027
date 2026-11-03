@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.32734980910928263,
+  "airfoil": "DAE21",
+  "motor": "NEU_6521_3P5_362",
+  "prop": "APC_15x10",
+  "n_motors": 1,
+  "pack": "TP_7S3850_70C",
+  "sensor_mass_kg": 13.16,
+  "n_simulators": 0,
+  "taper": 0.4893756285644408,
+  "sensor_m3_kg": 11.281193819956753,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}

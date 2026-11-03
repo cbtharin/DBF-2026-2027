@@ -1,0 +1,13 @@
+__pycache__/
+*.py[cod]
+results/
+*.csv
+!examples/*.csv
+.venv/
+.vscode/
+.idea/
+
+# Your own component entries are worth committing - they are
+# data, not build output.
+!catalogues/
+!catalogues/*.csv

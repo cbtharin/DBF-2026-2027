@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.356633030878445,
+  "airfoil": "SD7062",
+  "motor": "NEU_6521_3P5_362",
+  "prop": "APC_16x8",
+  "n_motors": 1,
+  "pack": "GA_6S4500_60C",
+  "sensor_mass_kg": 11.140675758661718,
+  "n_simulators": 0,
+  "taper": 0.4339606089318478,
+  "sensor_m3_kg": 10.2110387064491,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}

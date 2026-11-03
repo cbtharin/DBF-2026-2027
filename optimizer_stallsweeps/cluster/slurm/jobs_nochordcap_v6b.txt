@@ -1,0 +1,6 @@
+# name | run_cluster.py arguments: jobs_nochordcap_v6.txt's 20 and 25 mph lines again, on the m121 code.
+# In v6 both sampled nothing that flew in the coarse sweep and stopped before scoring their seed designs
+# (v5's 25 mph winner among them, which flies 25 mph).  Now an empty coarse sweep goes on from the seeds.
+#     sbatch --array=1-2 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_nochordcap_v6b.txt
+nochord_v6b_truestall20mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 20 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6b_truestall25mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 25 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot

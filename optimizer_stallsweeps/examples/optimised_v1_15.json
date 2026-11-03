@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.29133660688523005,
+  "airfoil": "USA35B",
+  "motor": "SUNNYSKY_X4120_V3_480",
+  "prop": "APC_13x10",
+  "n_motors": 1,
+  "pack": "GA_6S4500_60C",
+  "sensor_mass_kg": 9.513694454718372,
+  "n_simulators": 0,
+  "taper": 0.45,
+  "sensor_m3_kg": 9.513694454718372,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}

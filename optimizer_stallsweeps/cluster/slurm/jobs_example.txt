@@ -1,0 +1,6 @@
+# name | run_cluster.py arguments - one search per line (sbatch --array=1-N slurm/array.sbatch slurm/jobs_example.txt)
+# Two full exp8-scale searches from different random seeds (a convergence check), and one per motor count.
+full_seed20262027 | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds
+full_seed7        | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --seed 7
+one_motor         | --thorough --top 25 --finalists 32 --motor-counts 1 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds
+two_motors        | --thorough --top 25 --finalists 32 --motor-counts 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds

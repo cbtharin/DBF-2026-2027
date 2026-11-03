@@ -1,0 +1,18 @@
+{
+  "span_m": 1.8287999999999993,
+  "chord_m": 0.4688418547083649,
+  "airfoil": "S1223",
+  "motor": "NEU_6514M_9P5_200",
+  "prop": "APC_25x12.5",
+  "n_motors": 1,
+  "pack": "TATTU_RL_6S4500_95C",
+  "sensor_mass_kg": 10.755979722732686,
+  "n_simulators": 0,
+  "taper": 1.0,
+  "sensor_m3_kg": 10.729089773425855,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "wing_prop_layout": "mid",
+  "winglet_h_m": 0.2743199999999999,
+  "tail_vol_h": 0.9
+}

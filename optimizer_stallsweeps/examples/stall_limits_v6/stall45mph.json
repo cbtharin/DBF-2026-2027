@@ -1,0 +1,18 @@
+{
+  "span_m": 1.8287999999999993,
+  "chord_m": 0.3143531120656939,
+  "airfoil": "S1223",
+  "motor": "NEU_6514M_8_237",
+  "prop": "APC_20.5x14EPN",
+  "n_motors": 1,
+  "pack": "OVONIC_6S4500_100C",
+  "sensor_mass_kg": 13.811070399624057,
+  "n_simulators": 0,
+  "taper": 1.0,
+  "sensor_m3_kg": 13.776542723624997,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "wing_prop_layout": "mid",
+  "winglet_h_m": 0.2743199999999999,
+  "tail_vol_h": 0.9
+}

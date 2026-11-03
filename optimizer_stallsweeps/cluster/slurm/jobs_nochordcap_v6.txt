@@ -1,0 +1,14 @@
+# name | run_cluster.py arguments: jobs_chord24_v5.txt's true stall limits (lift / 1.0, power off at the
+# Mission 2 weight, in the 36 C air) with NO chord cap: the wing's chord is bounded only by the 6 ft span
+# and aspect ratio 1-14.  In v5 the 24 in cap bound at 25 mph (chord 24.0) and nothing flew at 20 mph;
+# here the wing can grow to find out what a bigger chord buys.  Line 8 is a fresh no-limit search on
+# today's code (no stall limit, no chord cap), the reference v5 no longer has; --array=1-7 skips it.
+#     sbatch --array=1-8 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_nochordcap_v6.txt
+nochord_v6_truestall20mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 20 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall25mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 25 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall30mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 30 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 35 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 40 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 45 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_truestall50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --max-stall-mph 50 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+nochord_v6_nolimit | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --ar 1 14 --fill-cores

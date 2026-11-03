@@ -1,0 +1,18 @@
+{
+  "span_m": 1.8287999999999744,
+  "chord_m": 0.3084156110319655,
+  "airfoil": "SD7032",
+  "motor": "NEU_6514M_6P5_292",
+  "prop": "APC_18x12",
+  "n_motors": 1,
+  "pack": "TATTU_RL_6S4500_95C",
+  "sensor_mass_kg": 15.462669360163401,
+  "n_simulators": 0,
+  "taper": 1.0,
+  "sensor_m3_kg": 13.998079257186506,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "wing_prop_layout": "mid",
+  "winglet_h_m": 0.2743199999999962,
+  "tail_vol_h": 0.9
+}

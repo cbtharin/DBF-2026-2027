@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.32537941074892646,
+  "airfoil": "E205",
+  "motor": "TMOTOR_AT4125_540",
+  "prop": "APC_11x7",
+  "n_motors": 2,
+  "pack": "GA_6S4500_60C",
+  "sensor_mass_kg": 8.564278270698468,
+  "n_simulators": 0,
+  "taper": 0.45,
+  "sensor_m3_kg": 8.564278270698468,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}

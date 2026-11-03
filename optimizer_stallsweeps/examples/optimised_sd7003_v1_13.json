@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.3434096087577422,
+  "airfoil": "SD7003",
+  "motor": "SCORPION_SII_4025_330",
+  "prop": "APC_16x12",
+  "n_motors": 1,
+  "pack": "GA_6S4500_60C",
+  "sensor_mass_kg": 9.414855967058315,
+  "n_simulators": 0,
+  "taper": 0.45,
+  "sensor_m3_kg": 9.414855967058315,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}

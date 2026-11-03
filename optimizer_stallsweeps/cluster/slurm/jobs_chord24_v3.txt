@@ -1,0 +1,11 @@
+# name | run_cluster.py arguments: jobs_chord24_v2.txt again, filling all 64 cores (m114,
+# --fill-cores): refinements, swap refinements and finalists in whole rounds of the workers
+# (100 -> 128, 18 -> 64, 32 -> 64), and the best configurations refined from more than one
+# start when too few have a flying sample.  The v2 30 mph search used 68% of its cores.
+#     sbatch --array=1-6 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_chord24_v3.txt
+chord24v3_stall30mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 30 --fill-cores
+chord24v3_stall35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 35 --fill-cores
+chord24v3_stall40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 40 --fill-cores
+chord24v3_stall45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 45 --fill-cores
+chord24v3_stall50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 50 --fill-cores
+nolimit_v3 | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --fill-cores

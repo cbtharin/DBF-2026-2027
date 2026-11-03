@@ -1,0 +1,16 @@
+# name | run_cluster.py arguments: jobs_chord24_v4.txt's sweep with the limit on the TRUE stall
+# (--stall-lift-fos 1.0): power off at the Mission 2 weight on the wing's full lift, in the hottest
+# weather preset's air (36 C).  v4 checked lift / 1.5, so its 30-50 mph limits were true stalls of
+# 25-42 mph; here 20-50 mph is the true stall itself.  The 50 mph line still binds: 1 of v3's 64
+# no-limit finalists stalls under 50 mph true on the hot day.  20 and 25 mph are at the floor of a
+# 24 in chord, 6 ft wing: v4's lightest airframes stall at 23-25 mph true carrying the smallest
+# sensor the 6 in length rule allows, so 20 mph may find nothing feasible.  The search then stops
+# after its coarse sweep with "no feasible design", and the other lines are unaffected.
+#     sbatch --array=1-7 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_chord24_v5.txt
+chord24v5_truestall20mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 20 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall25mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 25 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall30mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 30 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 35 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 40 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 45 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot
+chord24v5_truestall50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 50 --stall-lift-fos 1.0 --fill-cores --stall-air tucson-hot

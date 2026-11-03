@@ -1,0 +1,10 @@
+# name | run_cluster.py arguments: jobs_chord24_v3.txt's five stall limits again, with the limit
+# checked in the hottest weather preset's air (m118, --stall-air tucson-hot, the default now).
+# In v3 every stall-limited finalist sat on its limit at 28 C and broke it by 0.5-0.9 mph in the
+# 36 C preset.  The no-limit search is not rerun: the change only touches the stall check.
+#     sbatch --array=1-5 --mem=48G --time=24:00:00 slurm/array.sbatch slurm/jobs_chord24_v4.txt
+chord24v4_stall30mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 30 --fill-cores --stall-air tucson-hot
+chord24v4_stall35mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 35 --fill-cores --stall-air tucson-hot
+chord24v4_stall40mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 40 --fill-cores --stall-air tucson-hot
+chord24v4_stall45mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 45 --fill-cores --stall-air tucson-hot
+chord24v4_stall50mph | --thorough --top 25 --finalists 32 --motor-counts 1 2 --keep-propulsion 600 --refine 100 --swap-parents 12 --seeds seeds --max-chord-in 24 --ar 1 14 --max-stall-mph 50 --fill-cores --stall-air tucson-hot

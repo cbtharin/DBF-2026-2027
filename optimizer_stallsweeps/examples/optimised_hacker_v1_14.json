@@ -1,0 +1,16 @@
+{
+  "span_m": 1.8288000000000002,
+  "chord_m": 0.2939905749140973,
+  "airfoil": "USA35B",
+  "motor": "HACKER_A50_14L_TURNADO_V4_400",
+  "prop": "APC_15x10",
+  "n_motors": 1,
+  "pack": "GA_6S4000_60C",
+  "sensor_mass_kg": 8.70395890401311,
+  "n_simulators": 0,
+  "taper": 0.45688925954116166,
+  "sensor_m3_kg": 8.70395890401311,
+  "drop_height_in": 60,
+  "n_systems": 1,
+  "tail_vol_h": 0.55
+}
